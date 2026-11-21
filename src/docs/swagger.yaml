@@ -1,0 +1,372 @@
+openapi: 3.0.3
+info:
+  title: MB Turismo API
+  description: API para gerenciamento de pontos turísticos, trilhas e avaliações.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor local
+
+tags:
+  - name: Saúde
+  - name: Usuários
+  - name: Pontos turísticos
+  - name: Trilhas
+  - name: Avaliações
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+        nomeUsuario:
+          type: string
+        perfil:
+          type: string
+          enum: [usuario, admin]
+
+    PontoTuristico:
+      type: object
+      properties:
+        _id:
+          type: string
+        nome:
+          type: string
+        descricao:
+          type: string
+        categoria:
+          type: string
+        imagem:
+          type: string
+        ativo:
+          type: boolean
+
+    Trilha:
+      type: object
+      properties:
+        _id:
+          type: string
+        pontoTuristico:
+          type: string
+        nome:
+          type: string
+        descricao:
+          type: string
+        dificuldade:
+          type: string
+          enum: [Fácil, Médio, Difícil]
+
+    Avaliacao:
+      type: object
+      properties:
+        _id:
+          type: string
+        nomeUsuario:
+          type: string
+        comentario:
+          type: string
+        nota:
+          type: integer
+          minimum: 1
+          maximum: 5
+        pontoTuristico:
+          type: string
+        aprovado:
+          type: boolean
+
+paths:
+  /api/health:
+    get:
+      tags: [Saúde]
+      summary: Verificar funcionamento da API
+      responses:
+        '200':
+          description: API funcionando
+
+  /api/usuarios/cadastrar:
+    post:
+      tags: [Usuários]
+      summary: Cadastrar usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nomeUsuario, senha]
+              properties:
+                nomeUsuario:
+                  type: string
+                senha:
+                  type: string
+      responses:
+        '201':
+          description: Cadastro realizado
+        '400':
+          description: Dados inválidos
+        '409':
+          description: Usuário já cadastrado
+
+  /api/usuarios/login:
+    post:
+      tags: [Usuários]
+      summary: Realizar login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nomeUsuario, senha]
+              properties:
+                nomeUsuario:
+                  type: string
+                senha:
+                  type: string
+      responses:
+        '200':
+          description: Login realizado
+        '401':
+          description: Usuário ou senha incorretos
+
+  /api/pontos:
+    get:
+      tags: [Pontos turísticos]
+      summary: Listar pontos turísticos
+      parameters:
+        - name: nome
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de pontos turísticos
+    post:
+      tags: [Pontos turísticos]
+      summary: Cadastrar ponto turístico
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, descricao, categoria]
+              properties:
+                nome:
+                  type: string
+                descricao:
+                  type: string
+                categoria:
+                  type: string
+                imagem:
+                  type: string
+      responses:
+        '201':
+          description: Ponto cadastrado
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Autenticação necessária
+        '403':
+          description: Acesso permitido somente para administradores
+
+  /api/pontos/{id}:
+    get:
+      tags: [Pontos turísticos]
+      summary: Consultar detalhes de um ponto
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ponto encontrado
+        '400':
+          description: Identificador inválido
+        '404':
+          description: Ponto não encontrado
+    patch:
+      tags: [Pontos turísticos]
+      summary: Atualizar ponto turístico
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nome:
+                  type: string
+                descricao:
+                  type: string
+                categoria:
+                  type: string
+                imagem:
+                  type: string
+      responses:
+        '200':
+          description: Ponto atualizado
+        '400':
+          description: Dados ou identificador inválidos
+        '401':
+          description: Autenticação necessária
+        '403':
+          description: Acesso permitido somente para administradores
+        '404':
+          description: Ponto não encontrado
+
+  /api/trilhas:
+    post:
+      tags: [Trilhas]
+      summary: Cadastrar trilha
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pontoTuristico, nome, descricao]
+              properties:
+                pontoTuristico:
+                  type: string
+                nome:
+                  type: string
+                descricao:
+                  type: string
+                dificuldade:
+                  type: string
+                  enum: [Fácil, Médio, Difícil]
+      responses:
+        '201':
+          description: Trilha cadastrada
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Autenticação necessária
+        '403':
+          description: Acesso permitido somente para administradores
+        '409':
+          description: Trilha duplicada
+
+  /api/trilhas/ponto/{pontoId}:
+    get:
+      tags: [Trilhas]
+      summary: Buscar trilha de um ponto turístico
+      parameters:
+        - name: pontoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trilha encontrada
+        '400':
+          description: Identificador inválido
+        '404':
+          description: Trilha não encontrada
+
+  /api/avaliacoes:
+    post:
+      tags: [Avaliações]
+      summary: Enviar avaliação
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comentario, nota, pontoTuristico]
+              properties:
+                comentario:
+                  type: string
+                nota:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                pontoTuristico:
+                  type: string
+      responses:
+        '201':
+          description: Avaliação enviada
+        '400':
+          description: Dados inválidos
+        '401':
+          description: Autenticação necessária
+
+  /api/avaliacoes/ponto/{pontoId}:
+    get:
+      tags: [Avaliações]
+      summary: Listar avaliações aprovadas de um ponto
+      parameters:
+        - name: pontoId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Avaliações e média
+        '400':
+          description: Identificador inválido
+
+  /api/avaliacoes/pendentes:
+    get:
+      tags: [Avaliações]
+      summary: Listar avaliações pendentes
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de avaliações pendentes
+        '401':
+          description: Autenticação necessária
+        '403':
+          description: Acesso permitido somente para administradores
+
+  /api/avaliacoes/{id}/aprovar:
+    patch:
+      tags: [Avaliações]
+      summary: Aprovar avaliação
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Avaliação aprovada
+        '401':
+          description: Autenticação necessária
+        '403':
+          description: Acesso permitido somente para administradores
+        '404':
+          description: Avaliação não encontrada
